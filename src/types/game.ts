@@ -1,67 +1,51 @@
-// Core types for the puzzle game
-export type JewelRating = 'none' | 'bronze' | 'silver' | 'gold';
+// Simplified types for barebone puzzle game
+export type PrismType = 'normal' | 'splitter' | 'mirror' | 'amplifier';
 
 export interface PuzzleElement {
   id: string;
-  type: 'prism' | 'block' | 'plate' | 'jewel' | 'rune';
+  type: 'prism' | 'rune';
   position: [number, number, number];
-  rotation?: number; // For rotatable elements
-  isActivated?: boolean; // For plates and jewels
+  rotation?: number;
+  prismType?: PrismType; // Type of prism (normal, splitter, mirror, amplifier)
+  requiredBeams?: number; // For runes: how many beams needed to activate
+  locked?: boolean; // If true, prism cannot be rotated by player
 }
 
-export interface LightBeam {
+export interface Obstacle {
   id: string;
-  start: [number, number, number];
-  end: [number, number, number];
-  active: boolean;
-  blocked?: boolean; // True if this beam is stopped by an obstacle
-  prismId?: string; // ID of prism this beam hits
+  type: 'pillar' | 'wall' | 'crystal';
+  position: [number, number, number];
+  height?: number;
 }
 
 export interface Level {
   id: number;
-  chamber: number;
   name: string;
   maxMoves: number;
-  parMoves: number;
-  expertMoves: number;
-  elements: PuzzleElement[];
-  lightSources: Array<{
-    position: [number, number, number];
-    direction: [number, number, number];
-  }>;
   runePosition: [number, number, number];
-}
-
-export interface LevelProgress {
-  levelId: number;
-  completed: boolean;
-  bestMoves: number;
-  jewel: JewelRating;
-  score: number;
+  solution: Record<string, number>; // prismId -> target rotation in degrees
+  chain: string[]; // Ordered array of prism IDs showing the path (last one points to rune)
+  secondaryChains?: string[][]; // Additional chains for multi-beam puzzles
+  elements: PuzzleElement[];
+  obstacles?: Obstacle[]; // Optional obstacles that block line of sight
+  starThresholds?: {
+    gold: number;   // moves needed for gold star
+    silver: number; // moves needed for silver star
+    bronze: number; // moves needed for bronze star
+  };
 }
 
 export interface GameState {
   currentLevel: number;
-  currentChamber: number;
   movesRemaining: number;
   movesUsed: number;
   elementsState: PuzzleElement[];
-  lightBeams: LightBeam[];
   levelComplete: boolean;
   levelFailed: boolean;
-  score: number;
-  jewelsCollectedThisLevel: number;
+  starsEarned: 0 | 1 | 2 | 3; // Star rating for current level completion
+  levelBestScores: Record<number, number>; // levelId -> best moves used
   history: Array<{
     elementsState: PuzzleElement[];
     movesRemaining: number;
-    jewelsCollectedThisLevel: number;
   }>;
-}
-
-export interface GameProgress {
-  levelsProgress: Record<number, LevelProgress>;
-  totalJewels: number;
-  unlockedChambers: number[];
-  totalScore: number;
 }

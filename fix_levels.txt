@@ -1,0 +1,12 @@
+Issues to fix:
+1. Remove all "rune1" elements from every level (they duplicate runePosition)
+2. Adjust positions with 18.4° angle errors:
+   - Level 2: prism2 at [1,0,0] → rune at [0,0,3] gives 341.6° (should be at [1,0,3] for 0°)
+   - Level 3: prism3 at [1,0,1] → rune at [0,0,3] gives 333.4° (should be at [0,0,1] for 0°)
+   - Level 6: prism1 at [-1,0,0] → prism2 at [1,0,1] gives 63.4° (tolerable with 45°)
+   - Level 9: prism1 at [-2,0,-2] → prism2 at [-1,0,0] gives 26.6° (tolerable with 45°)  
+   - Level 10: prism2 at [-3,0,0] → prism3 at [-2,0,2] gives 26.6° (tolerable with 45°)
+   - Level 11: Multiple 63.4° angles (tolerable with 45°)
+
+The 18.4° errors are from positions like [-1,3] which give atan2(-1,3) = 341.6°
+To get exactly 0° (forward), target should be directly ahead on Z axis (same X).

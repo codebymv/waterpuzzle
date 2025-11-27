@@ -1,0 +1,649 @@
+import { Level } from '../types/game';
+
+/**
+ * DIFFICULTY PARAMETERS FOR PATTERN MATCHING PUZZLES:
+ * 
+ * 1. NUMBER OF PRISMS (3-8)
+ *    - More prisms = more state to track
+ * 
+ * 2. TOTAL ROTATION STEPS NEEDED
+ *    - Each click = 45°, so 180° = 4 clicks
+ *    - Sum of all rotations needed
+ * 
+ * 3. STARTING ROTATIONS
+ *    - All at 0° = Easy (fresh start)
+ *    - Pre-rotated/scrambled = Hard (need to figure out current state)
+ * 
+ * 4. MOVE EFFICIENCY
+ *    - Exact moves needed = Hard (no room for error)
+ *    - Extra moves = Easier (can undo/experiment)
+ * 
+ * 5. SOLUTION PATTERN COMPLEXITY
+ *    - All same angle = Easy (e.g., all to 90°)
+ *    - All different angles = Medium
+ *    - Similar angles = Hard to distinguish (e.g., 90° vs 135°)
+ * 
+ * 6. VISUAL SYMMETRY
+ *    - Symmetric layout = Easier to remember
+ *    - Asymmetric = Harder to track
+ */
+
+export const LEVELS: Level[] = [
+  // Level 1: Tutorial - Single prism, direct to rune (learn rotation basics)
+  {
+    id: 1,
+    name: 'First Light',
+    maxMoves: 5,
+    parMoves: 2,
+    runePosition: [0, 0, 2],
+    chain: ['prism1'], // Just one prism → rune
+    solution: {
+      prism1: 0   // Point forward to rune (2 clicks from 270°)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [0, 0, 0],
+        rotation: 270  // Start pointing left, needs to point forward
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [0, 0, 2]
+      }
+    ]
+  },
+
+  // Level 2: Tutorial - Two-prism chain (learn chaining concept)
+  {
+    id: 2,
+    name: 'The Chain',
+    maxMoves: 10,
+    parMoves: 4,
+    runePosition: [0, 0, 3],
+    chain: ['prism1', 'prism2'], // prism1 → prism2 → rune
+    solution: {
+      prism1: 90,   // Point right to prism2 (2 clicks from 0°)
+      prism2: 0     // Point forward to rune (2 clicks from 270°)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, 0],
+        rotation: 0   // Needs to point right
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [1, 0, 0],
+        rotation: 270   // Needs to point forward
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [0, 0, 3]
+      }
+    ]
+  },
+
+  // Level 3: Tutorial - L-turn (learn 90° corners)
+  {
+    id: 3,
+    name: 'The Corner',
+    maxMoves: 12,
+    parMoves: 5,
+    runePosition: [0, 0, 3],
+    chain: ['prism1', 'prism2', 'prism3'],
+    solution: {
+      prism1: 0,    // Point forward (0 clicks - already correct!)
+      prism2: 90,   // Turn right (2 clicks from 0°)
+      prism3: 315   // Point NW to rune (3 clicks from 180°)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, -2],
+        rotation: 0   // Already correct - teaches observation
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [-2, 0, 1],
+        rotation: 0   // Needs 90° turn
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [1, 0, 1],
+        rotation: 180   // Needs forward
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [0, 0, 3]
+      }
+    ]
+  },
+
+  // Level 4: CONSTRAINT PUZZLE - Locked obstacle forces detour
+  {
+    id: 4,
+    name: 'The Obstacle',
+    maxMoves: 6,
+    parMoves: 3,
+    runePosition: [0, 0, 3],
+    chain: ['prism1', 'prism2', 'prism3'], // Must route AROUND locked prism
+    solution: {
+      prism1: 90,   // Must go right (locked prism blocks straight path)
+      prism2: 0,    // Forward  
+      prism3: 315   // NW to rune (3 clicks)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [1, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [1, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'obstacle1',
+        type: 'prism',
+        position: [-2, 0, 2],
+        rotation: 90, // Locked at wrong angle - blocks straight path!
+        locked: true
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [0, 0, 3]
+      }
+    ]
+  },
+
+  // Level 5: DEDUCTION PUZZLE - Multiple prisms, only ONE path works
+  {
+    id: 5,
+    name: 'The Choice',
+    maxMoves: 8,
+    parMoves: 4,
+    runePosition: [0, 0, 3],
+    chain: ['prism1', 'prism3', 'prism4'], // prism2 is WRONG path (locked at bad angle)
+    solution: {
+      prism1: 45,   // NE to prism3 (not prism2!)
+      prism3: 90,   // Right to prism4 (2 clicks)
+      prism4: 315   // NW to rune (7 clicks backwards)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [-2, 0, 2],
+        rotation: 180, // WRONG PATH - locked at angle that can't reach rune!
+        locked: true
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [0, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'prism4',
+        type: 'prism',
+        position: [1, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [0, 0, 3]
+      }
+    ]
+  },
+
+  // Level 6: PLANNING PUZZLE - Tight move budget forces optimal path
+  {
+    id: 6,
+    name: 'Efficiency Test',
+    maxMoves: 4,
+    parMoves: 4,
+    runePosition: [2, 0, 2],
+    chain: ['prism1', 'prism2', 'prism3'], // EXACTLY 4 moves, no waste allowed
+    solution: {
+      prism1: 45,   // 1 click (63.4° rounds to 45°)
+      prism2: 135,  // 3 clicks (SE diagonal)
+      prism3: 0     // 0 clicks (already pointing at rune)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-1, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [1, 0, 1],
+        rotation: 0
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [2, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [2, 0, 2]
+      }
+    ]
+  },
+
+  // Level 7: MAZE PUZZLE - Multiple locked obstacles create corridors
+  {
+    id: 7,
+    name: 'The Maze',
+    maxMoves: 8,
+    parMoves: 4,
+    runePosition: [3, 0, 3],
+    chain: ['prism1', 'prism2', 'prism3', 'prism4'], // Must navigate around walls
+    solution: {
+      prism1: 0,    // Forward
+      prism2: 90,   // Right
+      prism3: 0,    // Forward
+      prism4: 90    // Right to rune (2 clicks)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, -2],
+        rotation: 0
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [-2, 0, 1],
+        rotation: 0
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [1, 0, 1],
+        rotation: 0
+      },
+      {
+        id: 'prism4',
+        type: 'prism',
+        position: [1, 0, 3],
+        rotation: 0
+      },
+      // Locked "walls" blocking direct paths
+      {
+        id: 'wall1',
+        type: 'prism',
+        position: [0, 0, -2],
+        rotation: 45,
+        locked: true
+      },
+      {
+        id: 'wall2',
+        type: 'prism',
+        position: [0, 0, 0],
+        rotation: 135,
+        locked: true
+      },
+      {
+        id: 'wall3',
+        type: 'prism',
+        position: [-1, 0, 2],
+        rotation: 90,
+        locked: true
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [3, 0, 3]
+      }
+    ]
+  },
+
+  // Level 8: ELIMINATION PUZZLE - 3 paths, only 1 works (locked decoys)
+  {
+    id: 8,
+    name: 'Three Paths',
+    maxMoves: 10,
+    parMoves: 5,
+    runePosition: [3, 0, 2],
+    chain: ['prism1', 'prism5', 'prism6'], // Path C is correct!
+    solution: {
+      prism1: 45,   // NE towards path C
+      prism5: 90,   // Right
+      prism6: 90    // Right to rune (2 clicks)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, 0],
+        rotation: 0
+      },
+      // Path A (WRONG - locked dead end)
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [0, 0, -2],
+        rotation: 0,
+        locked: true
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [2, 0, -2],
+        rotation: 90, // Points nowhere
+        locked: true
+      },
+      // Path B (WRONG - locked wrong angle)
+      {
+        id: 'prism4',
+        type: 'prism',
+        position: [0, 0, 0],
+        rotation: 180, // Points backwards!
+        locked: true
+      },
+      // Path C (CORRECT - only unlocked path)
+      {
+        id: 'prism5',
+        type: 'prism',
+        position: [0, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'prism6',
+        type: 'prism',
+        position: [2, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [3, 0, 2]
+      }
+    ]
+  },
+
+  // Level 9: TIGHT SEQUENCE PUZZLE - Must hit exact angles in order
+  {
+    id: 9,
+    name: 'Precision Path',
+    maxMoves: 14,
+    parMoves: 7,
+    runePosition: [3, 0, 0],
+    chain: ['prism1', 'prism2', 'prism3', 'prism4'],
+    solution: {
+      prism1: 45,   // NE diagonal (1 click - 26.6° rounds to 45°)
+      prism2: 90,   // Right (2 clicks)
+      prism3: 135,  // SE diagonal (3 clicks)
+      prism4: 45    // NE to rune (1 click)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-2, 0, -2],
+        rotation: 0
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [-1, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [1, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism4',
+        type: 'prism',
+        position: [2, 0, -1],
+        rotation: 0
+      },
+      // Locked obstacles force specific path
+      {
+        id: 'block1',
+        type: 'prism',
+        position: [0, 0, -2],
+        rotation: 0,
+        locked: true
+      },
+      {
+        id: 'block2',
+        type: 'prism',
+        position: [0, 0, 1],
+        rotation: 0,
+        locked: true
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [3, 0, 0]
+      }
+    ]
+  },
+
+  // Level 10: MASTERY - Complex maze with multiple locked obstacles
+  {
+    id: 10,
+    name: 'The Gauntlet',
+    maxMoves: 14,
+    parMoves: 7,
+    runePosition: [3, 0, 3],
+    chain: ['prism1', 'prism2', 'prism3', 'prism4', 'prism5'],
+    solution: {
+      prism1: 0,    // Forward
+      prism2: 45,   // NE diagonal (1 click - 26.6° rounds to 45°)
+      prism3: 90,   // Right (2 clicks)
+      prism4: 135,  // SE diagonal (3 clicks)
+      prism5: 45    // NE to rune (1 click)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-3, 0, -2],
+        rotation: 0
+      },
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [-3, 0, 0],
+        rotation: 0
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [-2, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'prism4',
+        type: 'prism',
+        position: [1, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'prism5',
+        type: 'prism',
+        position: [2, 0, 1],
+        rotation: 0
+      },
+      // Dense locked obstacles creating maze
+      {
+        id: 'wall1',
+        type: 'prism',
+        position: [-1, 0, -2],
+        rotation: 90,
+        locked: true
+      },
+      {
+        id: 'wall2',
+        type: 'prism',
+        position: [-1, 0, 0],
+        rotation: 45,
+        locked: true
+      },
+      {
+        id: 'wall3',
+        type: 'prism',
+        position: [0, 0, 0],
+        rotation: 135,
+        locked: true
+      },
+      {
+        id: 'wall4',
+        type: 'prism',
+        position: [1, 0, 0],
+        rotation: 0,
+        locked: true
+      },
+      {
+        id: 'wall5',
+        type: 'prism',
+        position: [0, 0, 3],
+        rotation: 270,
+        locked: true
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [3, 0, 3]
+      }
+    ]
+  },
+
+  // Level 11: FINAL MASTERY - Multiple choices, tight budget, locked decoys
+  {
+    id: 11,
+    name: 'The Masterpiece',
+    maxMoves: 14,
+    parMoves: 7,
+    runePosition: [4, 0, 3],
+    chain: ['prism1', 'prism6', 'prism7', 'prism8', 'prism9'],
+    solution: {
+      prism1: 0,    // Forward (must choose right starting path)
+      prism6: 90,   // Right (2 clicks)
+      prism7: 45,   // NE diagonal (1 click)
+      prism8: 135,  // SE diagonal (3 clicks)
+      prism9: 45    // NE to rune (1 click - 63.4° rounds to 45°)
+    },
+    elements: [
+      {
+        id: 'prism1',
+        type: 'prism',
+        position: [-3, 0, -2],
+        rotation: 0
+      },
+      // WRONG PATH A - leads to locked dead end
+      {
+        id: 'prism2',
+        type: 'prism',
+        position: [-3, 0, 1],
+        rotation: 90,
+        locked: true
+      },
+      {
+        id: 'prism3',
+        type: 'prism',
+        position: [0, 0, 1],
+        rotation: 180, // Dead end
+        locked: true
+      },
+      // WRONG PATH B - locked at wrong angles
+      {
+        id: 'prism4',
+        type: 'prism',
+        position: [-1, 0, -1],
+        rotation: 270,
+        locked: true
+      },
+      {
+        id: 'prism5',
+        type: 'prism',
+        position: [1, 0, -1],
+        rotation: 0,
+        locked: true
+      },
+      // CORRECT PATH C - only valid solution
+      {
+        id: 'prism6',
+        type: 'prism',
+        position: [-3, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'prism7',
+        type: 'prism',
+        position: [-1, 0, 2],
+        rotation: 0
+      },
+      {
+        id: 'prism8',
+        type: 'prism',
+        position: [1, 0, 3],
+        rotation: 0
+      },
+      {
+        id: 'prism9',
+        type: 'prism',
+        position: [2, 0, 2],
+        rotation: 0
+      },
+      // Additional obstacles
+      {
+        id: 'wall1',
+        type: 'prism',
+        position: [0, 0, 0],
+        rotation: 45,
+        locked: true
+      },
+      {
+        id: 'wall2',
+        type: 'prism',
+        position: [2, 0, 0],
+        rotation: 135,
+        locked: true
+      },
+      {
+        id: 'rune1',
+        type: 'rune',
+        position: [4, 0, 3]
+      }
+    ]
+  }
+];

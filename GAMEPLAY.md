@@ -1,156 +1,183 @@
-# 🎮 Gameplay Fundamentals - Sunken Ruins
+# 🎮 Simplified Puzzle Mechanics - Pattern Matching Game
 
-## Core Game Loop
+## 🎯 Core Game Loop
 
 ### Objective
-Direct light/energy to the central rune to unlock the chamber using limited moves.
+Rotate all prisms to match the target pattern before running out of moves.
 
 ---
 
-## Move System
+## 🕹️ Controls
 
-### Actions That COST Moves (1 move each)
-1. **🔷 Rotate Prism** - Click to rotate 45° clockwise
-2. **🗿 Push Block** - Click to move block (currently +Z direction)
-
-### Actions That Are FREE (No move cost)
-1. **💎 Collect Jewel** - Click jewel to collect
-   - **Effect:** +2 moves, +50 points
-   - **Strategy:** Find jewels early to extend your move budget
-
-2. **⚡ Activate Pressure Plate** - Click plate to activate
-   - **Effect:** +5 moves restored
-   - **Strategy:** Strategic checkpoints for complex puzzles
-
-### Always Free Actions
-- **↶ Undo** - No cost, experiment freely
-- **⟲ Restart** - Reset level anytime
-- **🎥 Camera** - Rotate and zoom without penalty
+- **Click Prism**: Rotate 45° clockwise (costs 1 move)
+- **↶ Undo Button**: Undo last move (free)
+- **⟲ Restart Button**: Reset level to starting state (free)
+- **Mouse Drag**: Rotate camera around puzzle
+- **Scroll Wheel**: Zoom in/out
 
 ---
 
-## Scoring System
+## ⚙️ Game Mechanics
 
-### Base Points
-- **Level Completion:** 1,000 points
+### Win Condition
+- Each level has a **target rotation pattern** (hidden from player)
+- All prisms must match their target angles simultaneously
+- Game automatically checks and completes when pattern matches
 
-### Efficiency Bonus
-- **+100 points** per move saved under Par
-- Example: Par is 10, you finish in 7 = +300 bonus
+### Fail Condition
+- Run out of moves before completing the pattern
+- Can restart and try again with no penalty
 
-### Collectible Bonus
-- **+50 points** per jewel collected
+### Moves System
+- Each level has a **maximum move limit**
+- Every prism rotation costs **1 move**
+- Undo is **free** (encourages experimentation)
+- Restart is **free** (no frustration)
 
-### Jewel Ratings
-Earned based on move efficiency:
-
-| Rating | Requirement | Display |
-|--------|-------------|---------|
-| **Gold** | ≤ Expert Moves | 💎💎💎 |
-| **Silver** | ≤ Par Moves | 💎💎 |
-| **Bronze** | Any completion | 💎 |
-
-**Example Level:**
-- Max: 15 moves
-- Par: 10 moves  
-- Expert: 7 moves
-
-If you complete in:
-- 7 moves → Gold 💎💎💎
-- 9 moves → Silver 💎💎
-- 14 moves → Bronze 💎
+### Visual Feedback
+- **Purple Rune**: Pattern incomplete
+- **Green Rune**: Pattern complete (instant win!)
+- **Moves Counter**: Shows remaining moves
 
 ---
 
-## Level Progression
+## 📊 Difficulty Parameters
 
-### Chamber Unlocking
-- Collect jewels to unlock deeper chambers
-- Don't need perfect scores to progress
-- Can replay levels for better ratings
+Levels can be varied using these parameters:
 
-### Optimal Strategy
-1. **First Pass:** Complete levels (Bronze is fine)
-2. **Explore:** Find all jewels in each level
-3. **Optimize:** Return for Silver/Gold ratings
-4. **Master:** Perfect Expert solutions
+### 1. Number of Prisms (3-8)
+- **Easy**: 3 prisms
+- **Medium**: 4-5 prisms  
+- **Hard**: 6-8 prisms
+- More prisms = more state to track mentally
 
----
+### 2. Total Rotation Steps Required
+- Each click = 45° rotation
+- **Easy**: 6-10 total clicks needed
+- **Medium**: 11-16 total clicks
+- **Hard**: 17+ total clicks
 
-## Puzzle Elements
+### 3. Starting Rotations
+- **Easy**: All prisms start at 0° (clean slate)
+- **Medium**: Some pre-rotated
+- **Hard**: All scrambled (must deduce current state)
 
-### 🔷 Crystal Prisms
-- **Action:** Click to rotate 45°
-- **Cost:** 1 move per rotation
-- **Purpose:** Redirect light beams to the rune
-- **Tip:** Plan rotation sequence before starting
+### 4. Move Budget
+- **Generous**: 2x the optimal solution
+- **Balanced**: 1.5x the optimal solution
+- **Tight**: Exactly optimal moves (no waste allowed)
 
-### 🗿 Stone Blocks
-- **Action:** Click to push
-- **Cost:** 1 move per push
-- **Purpose:** Create platforms, block paths, trigger plates
-- **Tip:** Blocks can activate pressure plates
+### 5. Solution Pattern Complexity
+- **Easy**: All same angle (e.g., all 90°)
+- **Medium**: Sequential pattern (45°, 90°, 135°...)
+- **Hard**: Random different angles (harder to remember)
 
-### ⚡ Pressure Plates
-- **Action:** Click or place block on top
-- **Cost:** FREE (bonus action)
-- **Effect:** +5 moves restored
-- **Tip:** Save these for when you're running low on moves
-
-### 💎 Ancient Jewels
-- **Action:** Click to collect
-- **Cost:** FREE (bonus action)
-- **Effect:** +2 moves, +50 points
-- **Tip:** Collect early for maximum benefit
-
-### 🌀 Central Rune
-- **Purpose:** Target for light/energy
-- **Goal:** Activate to complete level
-- **Visual:** Glows when activated
+### 6. Spatial Layout
+- **Easy**: Linear row (left to right)
+- **Medium**: Grid or symmetric layout
+- **Hard**: Asymmetric scattered positions
 
 ---
 
-## Current Implementation Notes
+## 📈 Level Progression
 
-### Demo Features
-- Press **'C' key** to manually complete level (testing)
-- Progress auto-saves to localStorage
-- 5 tutorial levels in Chamber 1
+### Level 1: First Steps
+- **Difficulty**: Tutorial
+- **Prisms**: 3
+- **Pattern**: All 90° (simple repetition)
+- **Moves**: 15 (very generous)
+- **Starting**: All at 0°
 
-### Simplified Mechanics
-- Light beam physics are placeholder
-- Block movement is single direction
-- No collision detection yet
-- Manual level completion for testing
+### Level 2: Mixed Angles
+- **Difficulty**: Easy
+- **Prisms**: 3
+- **Pattern**: 0°, 180°, 90° (different angles)
+- **Moves**: 12
+- **Starting**: All at 0°
 
-### Full Game Would Include
-- Real light ray tracing through prisms
-- Multi-direction block pushing
-- Collision and physics
-- 30-40 total levels across 6-8 chambers
-- Sound effects and ambient audio
+### Level 3: Scrambled
+- **Difficulty**: Medium
+- **Prisms**: 3
+- **Pattern**: 180°, 90°, 270°
+- **Moves**: 10 (tighter)
+- **Starting**: Pre-scrambled (45°, 270°, 135°)
+- **Challenge**: Must figure out current state first
+
+### Level 4: Four Corners
+- **Difficulty**: Medium-Hard
+- **Prisms**: 4
+- **Pattern**: 135°, 225°, 315°, 45°
+- **Moves**: 14
+- **Layout**: Square formation around rune
+
+### Level 5: Memory Test
+- **Difficulty**: Hard
+- **Prisms**: 5
+- **Pattern**: 45°, 90°, 135°, 180°, 225° (all different)
+- **Moves**: 20
+- **Layout**: Linear row
+- **Challenge**: Remember 5 different angles
 
 ---
 
-## Tips for Players
+## 🎨 Future Enhancement Ideas
 
-1. **Use Undo Freely** - It doesn't cost moves!
-2. **Collect Jewels First** - More moves = more flexibility
-3. **Save Pressure Plates** - Use when needed
-4. **Experiment** - Restart has no penalty
-5. **Think Ahead** - Plan your move sequence
-6. **Optimize Later** - Bronze completion unlocks next levels
+Without adding complexity, you can enhance with:
+
+### Puzzle Variations
+1. **Symmetry Puzzles**: Mirror patterns (left = right)
+2. **Chain Puzzles**: Prisms in sequence must add up to specific total
+3. **Exclusion Puzzles**: Some angles are "forbidden" (lose if hit)
+4. **Speed Puzzles**: Same moves but add time pressure
+
+### Quality of Life
+1. **Hint System**: Show one correct prism angle (costs moves)
+2. **Solution Display**: After 3 fails, show target pattern
+3. **Ghost Overlay**: Briefly show target pattern at level start
+4. **Progress Indicator**: "2/5 prisms correct"
+
+### Visual Enhancements (still minimal)
+1. **Correct Prism Glow**: Green highlight when angle matches
+2. **Rotation Trail**: Brief arc showing rotation direction
+3. **Angle Markers**: Show 45° increments on prism base
+4. **Target Silhouettes**: Faint overlay of target positions
+
+### Meta Progression
+1. **Level Select**: Choose any level
+2. **Best Scores**: Track minimum moves per level
+3. **Efficiency Rating**: ⭐⭐⭐ based on move efficiency
+4. **Custom Levels**: Player-created patterns
 
 ---
 
-## Debugging
+## 🔧 Implementation Notes
 
-When testing, console logs show:
-- `🏛️` Level loading
-- `🔷` Prism rotations
-- `📦` Block movements  
-- `💎` Jewel collections
-- `⚡` Plate activations
-- `✅` Move tracking
+### Current Architecture
+- **Pattern matching**: Simple angle comparison
+- **Auto-check**: Validates after every move
+- **No physics**: Pure logic puzzle
+- **Instant feedback**: Win/lose immediately upon condition met
 
-Open browser DevTools Console (F12) to see gameplay events!
+### Why This Works
+- ✅ **Deterministic**: Same solution every time
+- ✅ **Testable**: Easy to verify correct patterns
+- ✅ **Scalable**: Add levels with just data
+- ✅ **Clear feedback**: Players know when they're close
+- ✅ **Low complexity**: ~100 lines of game logic
+
+### Key Files
+- **levels.ts**: Level definitions with solutions
+- **gameStore.ts**: Game logic and win condition
+- **PuzzleElements.tsx**: Prism rotation mechanics
+- **UI.tsx**: Win/fail screens and HUD
+
+---
+
+## 🎯 Design Philosophy
+
+**Simple Core + Infinite Depth**
+- One mechanic (rotate) mastered through pattern recognition
+- No complex physics or timing required
+- Pure spatial reasoning and memory
+- Easy to learn, progressively challenging
+- Minimal code, maximum replayability
