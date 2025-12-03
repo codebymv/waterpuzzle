@@ -3,31 +3,29 @@ export type PrismType = 'normal' | 'splitter' | 'mirror' | 'amplifier';
 
 export interface PuzzleElement {
   id: string;
-  type: 'prism' | 'rune';
+  type: 'prism';
   position: [number, number, number];
   rotation?: number;
   prismType?: PrismType; // Type of prism (normal, splitter, mirror, amplifier)
-  requiredBeams?: number; // For runes: how many beams needed to activate
   locked?: boolean; // If true, prism cannot be rotated by player
 }
 
-export interface Obstacle {
-  id: string;
-  type: 'pillar' | 'wall' | 'crystal';
+export interface LightSource {
   position: [number, number, number];
-  height?: number;
+  direction: number; // Angle in degrees (0 = forward/north, 90 = east, etc.)
+}
+
+export interface TargetCrystal {
+  position: [number, number, number];
 }
 
 export interface Level {
   id: number;
   name: string;
   maxMoves: number;
-  runePosition: [number, number, number];
-  solution: Record<string, number>; // prismId -> target rotation in degrees
-  chain: string[]; // Ordered array of prism IDs showing the path (last one points to rune)
-  secondaryChains?: string[][]; // Additional chains for multi-beam puzzles
+  lightSource: LightSource; // Where the beam starts
+  target: TargetCrystal;    // Where beam needs to reach
   elements: PuzzleElement[];
-  obstacles?: Obstacle[]; // Optional obstacles that block line of sight
   starThresholds?: {
     gold: number;   // moves needed for gold star
     silver: number; // moves needed for silver star

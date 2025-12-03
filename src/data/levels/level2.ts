@@ -1,62 +1,44 @@
 import { Level } from '../../types/game';
 
-/**
- * LEVEL 2: MULTIPLE PATHS - "Two Roads"
- * 
- * Teaching: Multiple valid solutions exist
- * - Different paths can reach the same goal
- * - Encourages experimentation
- * 
- * Design: Y-fork where BOTH upper and lower paths reach the rune
- * Solution: prism2 can be 45° (upper) OR 315° (lower) - both work!
- */
+// Level 2: Opposite Day
+// Two SEPARATE groups - one needs CW, one needs CCW!
+// Teaches: right-click for counter-clockwise
 export const level2: Level = {
   id: 2,
-  name: 'Two Roads',
-  maxMoves: 12,
-  runePosition: [4, 0, 0],
-  chain: ['prism1', 'prism2', 'prism3'],
-  solution: {
-    prism1: 90,   // Point right to prism2
-    prism2: 45,   // Upper path (315° also works for lower path)
-    prism3: 315   // Point to rune from upper
+  name: 'Opposite Day',
+  maxMoves: 6,
+  lightSource: {
+    position: [-4, 0, 0],
+    direction: 90  // Beam travels east
   },
-  starThresholds: {
-    gold: 4,    // Efficient: found path quickly
-    silver: 7,  // Good: some exploration
-    bronze: 10  // Complete: tried both paths
+  target: {
+    position: [4, 0, 0]
   },
   elements: [
+    // Left prism (isolated)
     {
-      id: 'prism1',
+      id: 'left',
       type: 'prism',
-      position: [-2, 0, 0],
-      rotation: 0
+      position: [-1.5, 0, 0],
+      rotation: 0,   // Needs 90° = +2 CW
+      prismType: 'normal'
     },
+    // Right prism (isolated - gap > 1.5 from left)
     {
-      id: 'prism2',
+      id: 'right',
       type: 'prism',
-      position: [0, 0, 0],
-      rotation: 0
-    },
-    // Upper path
-    {
-      id: 'prism3',
-      type: 'prism',
-      position: [2, 0, 2],
-      rotation: 0
-    },
-    // Lower path (alternate - not in main chain but valid)
-    {
-      id: 'prism4',
-      type: 'prism',
-      position: [2, 0, -2],
-      rotation: 0
-    },
-    {
-      id: 'rune1',
-      type: 'rune',
-      position: [4, 0, 0]
+      position: [1.5, 0, 0],
+      rotation: 180, // Needs 90° = -2 CCW
+      prismType: 'normal'
     }
-  ]
+  ],
+  // Left: 0°→90° = 2 CW (left-click)
+  // Right: 180°→90° = 2 CCW (right-click!)
+  // They're not adjacent - solve independently
+  // Teaches: you need BOTH directions!
+  starThresholds: {
+    gold: 4,
+    silver: 5,
+    bronze: 6
+  }
 };

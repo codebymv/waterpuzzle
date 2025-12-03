@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 import { UnderwaterEnvironment } from './components/UnderwaterEnvironment';
-import { PuzzleElementComponent, ConnectionLines, ObstacleComponent } from './components/PuzzleElements';
+import { PuzzleElementComponent, LightSource, TargetCrystal, LightBeam } from './components/PuzzleElements';
 import { GameUI } from './components/UI';
 import { useGameStore } from './store/gameStore';
 import { LEVELS } from './data/levels';
@@ -16,15 +15,19 @@ function Scene() {
     <>
       <UnderwaterEnvironment />
       
+      {/* Light source emitter */}
+      {level && <LightSource level={level} />}
+      
+      {/* Target crystal */}
+      {level && <TargetCrystal level={level} />}
+      
+      {/* Prisms */}
       {elementsState.map(element => (
         <PuzzleElementComponent key={element.id} element={element} />
       ))}
       
-      {level?.obstacles?.map(obstacle => (
-        <ObstacleComponent key={obstacle.id} obstacle={obstacle} />
-      ))}
-      
-      <ConnectionLines />
+      {/* Light beam visualization */}
+      {level && <LightBeam level={level} />}
     </>
   );
 }
@@ -42,7 +45,7 @@ function App() {
         orthographic
         camera={{
           position: [0, 15, 0],
-          zoom: 50,
+          zoom: 35,  // Zoom out to see more of the level
           up: [0, 0, -1],
           near: 0.1,
           far: 1000

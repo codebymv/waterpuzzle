@@ -1,412 +1,370 @@
 import React from 'react';
-import { ThreeEvent } from '@react-three/fiber';
-import { PuzzleElement, Obstacle } from '../types/game';
+import { ThreeEvent, useFrame } from '@react-three/fiber';
+import { PuzzleElement, Level } from '../types/game';
 import { useGameStore } from '../store/gameStore';
-import { LEVELS } from '../data/levels/index';
+import * as THREE from 'three';
 
 interface PuzzleElementProps {
   element: PuzzleElement;
 }
 
 export function PuzzleElementComponent({ element }: PuzzleElementProps) {
-  switch (element.type) {
-    case 'prism':
-      return <CrystalPrism element={element} />;
-    case 'rune':
-      return <CentralRune element={element} />;
-    default:
-      return null;
+  if (element.type === 'prism') {
+    return <CrystalPrism element={element} />;
   }
+  return null;
 }
 
-// Obstacles that block line of sight
-export function ObstacleComponent({ obstacle }: { obstacle: Obstacle }) {
-  const height = obstacle.height || 1.5;
+// Light Source - emits the beam
+export function LightSource({ level }: { level: Level }) {
+  if (!level.lightSource) return null;
+  
+  const { position, direction } = level.lightSource;
+  const angleRad = (direction * Math.PI) / 180;
   
   return (
-    <group position={obstacle.position}>
-      {obstacle.type === 'pillar' && (
-        <>
-          {/* Main pillar */}
-          <mesh castShadow receiveShadow>
-            <cylinderGeometry args={[0.4, 0.5, height, 8]} />
-            <meshStandardMaterial
-              color="#2a3a5c"
-              roughness={0.7}
-              metalness={0.3}
-            />
-          </mesh>
-          
-          {/* Glowing rings */}
-          <mesh position={[0, height / 3, 0]}>
-            <torusGeometry args={[0.45, 0.05, 8, 16]} />
-            <meshStandardMaterial
-              color="#4dd8e8"
-              emissive="#4dd8e8"
-              emissiveIntensity={0.5}
-            />
-          </mesh>
-          <mesh position={[0, -height / 3, 0]}>
-            <torusGeometry args={[0.45, 0.05, 8, 16]} />
-            <meshStandardMaterial
-              color="#4dd8e8"
-              emissive="#4dd8e8"
-              emissiveIntensity={0.5}
-            />
-          </mesh>
-        </>
-      )}
+    <group position={position}>
+      {/* Emitter base */}
+      <mesh castShadow>
+        <cylinderGeometry args={[0.4, 0.5, 0.4, 8]} />
+        <meshStandardMaterial
+          color="#ffba08"
+          emissive="#ffba08"
+          emissiveIntensity={1}
+        />
+      </mesh>
       
-      {obstacle.type === 'wall' && (
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[0.5, height, 2]} />
-          <meshStandardMaterial
-            color="#1a2332"
-            roughness={0.8}
-            metalness={0.2}
-          />
-        </mesh>
-      )}
+      {/* Glowing orb */}
+      <mesh position={[0, 0.4, 0]}>
+        <sphereGeometry args={[0.35, 16, 16]} />
+        <meshStandardMaterial
+          color="#fffbe6"
+          emissive="#ffba08"
+          emissiveIntensity={2}
+          transparent
+          opacity={0.95}
+        />
+      </mesh>
       
-      {obstacle.type === 'crystal' && (
-        <mesh castShadow>
-          <octahedronGeometry args={[0.6, 0]} />
-          <meshStandardMaterial
-            color="#7b2cbf"
-            emissive="#7b2cbf"
-            emissiveIntensity={0.4}
-            transparent
-            opacity={0.7}
-          />
-        </mesh>
-      )}
+      {/* Direction indicator arrow */}
+      <mesh 
+        position={[Math.sin(angleRad) * 0.6, 0, Math.cos(angleRad) * 0.6]}
+        rotation={[Math.PI / 2, 0, -angleRad]}
+      >
+        <coneGeometry args={[0.2, 0.4, 8]} />
+        <meshStandardMaterial
+          color="#ffba08"
+          emissive="#ffba08"
+          emissiveIntensity={0.8}
+        />
+      </mesh>
     </group>
   );
 }
 
-// Connection lines showing spatial relationships
-export function ConnectionLines() {
-  const currentLevel = useGameStore(state => state.currentLevel);
-  const elementsState = useGameStore(state => state.elementsState);
-  const level = LEVELS.find(l => l.id === currentLevel);
+// Target Crystal - goal for the beam
+export function TargetCrystal({ level }: { level: Level }) {
+  const levelComplete = useGameStore(state => state.levelComplete);
   
-  if (!level || !level.chain) return null;
+  if (!level.target) return null;
   
-  const rune = elementsState.find(e => e.type === 'rune');
+  const { position } = level.target;
+  const pulseRef = React.useRef<THREE.Mesh>(null);
   
-  if (!rune) return null;
+  useFrame(({ clock }) => {
+    if (pulseRef.current) {
+      const scale = levelComplete 
+        ? 1.3 + Math.sin(clock.elapsedTime * 4) * 0.2
+        : 1.0 + Math.sin(clock.elapsedTime * 2) * 0.08;
+      pulseRef.current.scale.set(scale, scale, scale);
+    }
+  });
+  
+  return (
+    <group position={position}>
+      {/* Base platform */}
+      <mesh position={[0, -0.3, 0]} receiveShadow>
+        <cylinderGeometry args={[0.6, 0.7, 0.25, 6]} />
+        <meshStandardMaterial color="#2a3a5c" />
+      </mesh>
+      
+      {/* Crystal */}
+      <mesh ref={pulseRef} castShadow>
+        <octahedronGeometry args={[0.5, 0]} />
+        <meshStandardMaterial
+          color={levelComplete ? '#06ffa5' : '#7b2cbf'}
+          emissive={levelComplete ? '#06ffa5' : '#7b2cbf'}
+          emissiveIntensity={levelComplete ? 2 : 0.5}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+      
+      {/* Ring around crystal */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.7, 0.06, 8, 32]} />
+        <meshStandardMaterial
+          color={levelComplete ? '#06ffa5' : '#4a5568'}
+          emissive={levelComplete ? '#06ffa5' : '#7b2cbf'}
+          emissiveIntensity={levelComplete ? 1.5 : 0.3}
+        />
+      </mesh>
+    </group>
+  );
+}
 
-  // Helper: Check if beam path is blocked by obstacles
-  const isPathBlocked = (from: [number, number, number], to: [number, number, number]) => {
-    if (!level.obstacles) return false;
+// Helper: Ray to point intersection distance
+function rayToPointDistance(
+  rayOrigin: [number, number, number],
+  rayDir: [number, number, number],
+  point: [number, number, number],
+  radius: number
+): number | null {
+  const ox = rayOrigin[0], oz = rayOrigin[2];
+  const dx = rayDir[0], dz = rayDir[2];
+  const px = point[0], pz = point[2];
+  
+  const fx = px - ox;
+  const fz = pz - oz;
+  
+  const dot = fx * dx + fz * dz;
+  
+  if (dot < 0) return null;
+  
+  const closestX = ox + dx * dot;
+  const closestZ = oz + dz * dot;
+  
+  const distSq = (closestX - px) ** 2 + (closestZ - pz) ** 2;
+  
+  if (distSq <= radius * radius) {
+    return dot;
+  }
+  
+  return null;
+}
+
+// Helper: Normalize angle to 0-360
+function normalizeAngle(angle: number): number {
+  return ((angle % 360) + 360) % 360;
+}
+
+// Light Beam - traces path from source through prisms to target
+export function LightBeam({ level }: { level: Level }) {
+  const elementsState = useGameStore(state => state.elementsState);
+  const setBeamReachesTarget = useGameStore(state => state.setBeamReachesTarget);
+  
+  if (!level.lightSource) return null;
+  
+  // Trace the beam path
+  const beamPath = React.useMemo(() => {
+    const path: Array<{ 
+      from: [number, number, number], 
+      to: [number, number, number],
+      hitsTarget: boolean 
+    }> = [];
     
-    for (const obstacle of level.obstacles) {
-      const obstaclePos = obstacle.position;
-      const obstacleRadius = obstacle.type === 'pillar' ? 0.5 : 
-                           obstacle.type === 'wall' ? 1.0 : 0.6;
+    const source = level.lightSource;
+    if (!source) return path;
+    
+    let currentPos: [number, number, number] = [...source.position];
+    let currentDirection = source.direction;
+    const maxBounces = 20;
+    const visited = new Set<string>();
+    
+    for (let i = 0; i < maxBounces; i++) {
+      const angleRad = (currentDirection * Math.PI) / 180;
+      const dirX = Math.sin(angleRad);
+      const dirZ = Math.cos(angleRad);
       
-      // Check if line segment from->to intersects with obstacle circle
-      const dx = to[0] - from[0];
-      const dz = to[2] - from[2];
-      const fx = from[0] - obstaclePos[0];
-      const fz = from[2] - obstaclePos[2];
+      let closestHit: { 
+        type: 'prism' | 'target' | 'miss',
+        element?: PuzzleElement,
+        position: [number, number, number],
+        distance: number
+      } | null = null;
       
-      const a = dx * dx + dz * dz;
-      const b = 2 * (fx * dx + fz * dz);
-      const c = (fx * fx + fz * fz) - obstacleRadius * obstacleRadius;
+      // Check target
+      if (level.target) {
+        const targetDist = rayToPointDistance(
+          currentPos, [dirX, 0, dirZ], 
+          level.target.position, 0.5
+        );
+        if (targetDist !== null && targetDist > 0.1) {
+          closestHit = {
+            type: 'target',
+            position: level.target.position,
+            distance: targetDist
+          };
+        }
+      }
       
-      const discriminant = b * b - 4 * a * c;
-      
-      if (discriminant >= 0) {
-        const t1 = (-b - Math.sqrt(discriminant)) / (2 * a);
-        const t2 = (-b + Math.sqrt(discriminant)) / (2 * a);
+      // Check prisms
+      for (const element of elementsState) {
+        if (element.type !== 'prism') continue;
         
-        if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) {
-          return true; // Path is blocked
+        const dist = rayToPointDistance(
+          currentPos, [dirX, 0, dirZ],
+          element.position, 0.4
+        );
+        
+        if (dist !== null && dist > 0.1) {
+          if (!closestHit || dist < closestHit.distance) {
+            closestHit = {
+              type: 'prism',
+              element,
+              position: element.position,
+              distance: dist
+            };
+          }
+        }
+      }
+      
+      if (!closestHit || closestHit.distance > 10) {
+        const endX = currentPos[0] + dirX * 3;
+        const endZ = currentPos[2] + dirZ * 3;
+        path.push({
+          from: [...currentPos],
+          to: [endX, currentPos[1], endZ],
+          hitsTarget: false
+        });
+        break;
+      }
+      
+      path.push({
+        from: [...currentPos],
+        to: [...closestHit.position],
+        hitsTarget: closestHit.type === 'target'
+      });
+      
+      if (closestHit.type === 'target') {
+        break;
+      }
+      
+      if (closestHit.type === 'prism' && closestHit.element) {
+        const visitKey = closestHit.element.id + '-' + currentDirection;
+        if (visited.has(visitKey)) break;
+        visited.add(visitKey);
+        
+        const prism = closestHit.element;
+        const prismRotation = prism.rotation || 0;
+        
+        const receiveDirection = (prismRotation + 180) % 360;
+        const incomingDirection = (currentDirection + 180) % 360;
+        
+        const angleDiff = Math.abs(normalizeAngle(receiveDirection) - normalizeAngle(incomingDirection));
+        const canReceive = angleDiff < 45 || angleDiff > 315;
+        
+        if (canReceive) {
+          currentPos = [...closestHit.position];
+          currentDirection = prismRotation;
+        } else {
+          break;
         }
       }
     }
     
-    return false;
-  };
-
-  // Helper: Check if prism is pointing at target
-  const isPointingAt = (prism: any, targetPos: [number, number, number], angleOffset = 0) => {
-    const angleToTarget = Math.atan2(
-      targetPos[0] - prism.position[0],
-      targetPos[2] - prism.position[2]
-    ) * (180 / Math.PI);
-    
-    const normalizedAngle = ((angleToTarget % 360) + 360) % 360;
-    const prismAngle = (((prism.rotation || 0) + angleOffset) % 360 + 360) % 360;
-    
-    const diff = Math.abs(normalizedAngle - prismAngle);
-    const angleMatches = diff < 22.5 || diff > 337.5;
-    
-    // Check if path is blocked by obstacles
-    if (angleMatches && isPathBlocked(prism.position, targetPos)) {
-      return false;
+    return path;
+  }, [level, elementsState]);
+  
+  // Check if beam reaches target
+  const beamReachesTarget = beamPath.some(segment => segment.hitsTarget);
+  
+  // Update game state based on beam
+  React.useEffect(() => {
+    if (setBeamReachesTarget) {
+      setBeamReachesTarget(beamReachesTarget);
     }
-    
-    return angleMatches;
-  };
-
-  // Helper: Get beam outputs for a prism based on its type
-  const getBeamOutputs = (prism: any, targetPos: [number, number, number]) => {
-    const prismType = prism.prismType || 'normal';
-    const outputs: Array<{ targetPos: [number, number, number], angleOffset: number, isCorrect: boolean }> = [];
-
-    if (prismType === 'splitter') {
-      // Splitters output at ±45°
-      outputs.push(
-        { targetPos, angleOffset: -45, isCorrect: isPointingAt(prism, targetPos, -45) },
-        { targetPos, angleOffset: 0, isCorrect: isPointingAt(prism, targetPos, 0) },
-        { targetPos, angleOffset: 45, isCorrect: isPointingAt(prism, targetPos, 45) }
-      );
-    } else if (prismType === 'mirror') {
-      // Mirrors bend 90°
-      outputs.push({ targetPos, angleOffset: 90, isCorrect: isPointingAt(prism, targetPos, 90) });
-    } else {
-      // Normal prism
-      outputs.push({ targetPos, angleOffset: 0, isCorrect: isPointingAt(prism, targetPos, 0) });
-    }
-
-    return outputs;
-  };
+  }, [beamReachesTarget, setBeamReachesTarget]);
   
   return (
     <>
-      {level.chain.map((prismId, index) => {
-        const currentPrism = elementsState.find(el => el.id === prismId);
-        if (!currentPrism) return null;
-        
-        // Check if all previous prisms in the chain are correctly connected
-        let chainValid = true;
-        for (let i = 0; i < index; i++) {
-          const prevPrism = elementsState.find(el => el.id === level.chain[i]);
-          if (!prevPrism) {
-            chainValid = false;
-            break;
-          }
-          
-          // Determine what the previous prism should point to
-          const prevTarget = elementsState.find(el => el.id === level.chain[i + 1]);
-          if (!prevTarget) {
-            chainValid = false;
-            break;
-          }
-          
-          if (!isPointingAt(prevPrism, prevTarget.position)) {
-            chainValid = false;
-            break;
-          }
-        }
-        
-        // If chain is broken before this prism, don't show its line
-        if (!chainValid) return null;
-        
-        // Determine what this prism should point to
-        let targetPos: [number, number, number];
-        let isLastInChain = false;
-        
-        if (index < level.chain.length - 1) {
-          // Point to next prism
-          const nextPrism = elementsState.find(el => el.id === level.chain[index + 1]);
-          if (!nextPrism) return null;
-          targetPos = nextPrism.position;
-        } else {
-          // Last prism points to rune
-          targetPos = rune.position;
-          isLastInChain = true;
-        }
-        
-        // Get all beam outputs for this prism type
-        const outputs = getBeamOutputs(currentPrism, targetPos);
-        const hasCorrectOutput = outputs.some(out => out.isCorrect);
-        
-        // Only show lines if prism has at least one correct output
-        if (!hasCorrectOutput) return null;
-        
-        return (
-          <group key={`connection-${prismId}`}>
-            {outputs.map((output, idx) => {
-              if (!output.isCorrect) return null;
-              
-              // Calculate endpoint based on angle offset for visual beam
-              const angleRad = ((currentPrism.rotation || 0) + output.angleOffset) * (Math.PI / 180);
-              const distance = Math.sqrt(
-                Math.pow(targetPos[0] - currentPrism.position[0], 2) +
-                Math.pow(targetPos[2] - currentPrism.position[2], 2)
-              );
-              
-              const endX = currentPrism.position[0] + Math.sin(angleRad) * distance;
-              const endZ = currentPrism.position[2] + Math.cos(angleRad) * distance;
-              
-              return (
-                <Line
-                  key={`beam-${idx}`}
-                  points={[currentPrism.position, [endX, currentPrism.position[1], endZ]]}
-                  color='#06ffa5'
-                  lineWidth={2}
-                  opacity={0.6}
-                  transparent
-                  dashed={false}
-                  dashScale={5}
-                />
-              );
-            })}
-          </group>
-        );
-      })}
-
-      {/* Render secondary chains */}
-      {level.secondaryChains?.map((chain, chainIndex) => 
-        chain.map((prismId, index) => {
-          const currentPrism = elementsState.find(el => el.id === prismId);
-          if (!currentPrism) return null;
-          
-          // Check if all previous prisms in THIS secondary chain are correct
-          let chainValid = true;
-          for (let i = 0; i < index; i++) {
-            const prevPrism = elementsState.find(el => el.id === chain[i]);
-            if (!prevPrism) {
-              chainValid = false;
-              break;
-            }
-            
-            const prevTarget = elementsState.find(el => el.id === chain[i + 1]);
-            if (!prevTarget) {
-              chainValid = false;
-              break;
-            }
-            
-            if (!isPointingAt(prevPrism, prevTarget.position)) {
-              chainValid = false;
-              break;
-            }
-          }
-          
-          if (!chainValid) return null;
-          
-          // Determine target for this prism
-          let targetPos: [number, number, number];
-          if (index < chain.length - 1) {
-            const nextPrism = elementsState.find(el => el.id === chain[index + 1]);
-            if (!nextPrism) return null;
-            targetPos = nextPrism.position;
-          } else {
-            targetPos = rune.position;
-          }
-          
-          const outputs = getBeamOutputs(currentPrism, targetPos);
-          const hasCorrectOutput = outputs.some(out => out.isCorrect);
-          
-          if (!hasCorrectOutput) return null;
-          
-          return (
-            <group key={`secondary-${chainIndex}-${prismId}`}>
-              {outputs.map((output, idx) => {
-                if (!output.isCorrect) return null;
-                
-                const angleRad = ((currentPrism.rotation || 0) + output.angleOffset) * (Math.PI / 180);
-                const distance = Math.sqrt(
-                  Math.pow(targetPos[0] - currentPrism.position[0], 2) +
-                  Math.pow(targetPos[2] - currentPrism.position[2], 2)
-                );
-                
-                const endX = currentPrism.position[0] + Math.sin(angleRad) * distance;
-                const endZ = currentPrism.position[2] + Math.cos(angleRad) * distance;
-                
-                // Use different color for secondary chains
-                const chainColor = ['#06ffa5', '#00d4ff', '#ff6b9d'][chainIndex % 3];
-                
-                return (
-                  <Line
-                    key={`beam-sec-${idx}`}
-                    points={[currentPrism.position, [endX, currentPrism.position[1], endZ]]}
-                    color={chainColor}
-                    lineWidth={2}
-                    opacity={0.6}
-                    transparent
-                    dashed={false}
-                    dashScale={5}
-                  />
-                );
-              })}
-            </group>
-          );
-        })
-      )}
+      {beamPath.map((segment, index) => (
+        <BeamSegment 
+          key={index}
+          from={segment.from}
+          to={segment.to}
+          isConnected={segment.hitsTarget || index < beamPath.length - 1}
+          index={index}
+        />
+      ))}
     </>
   );
 }
 
-// Arrow showing which direction the prism is "pointing"
-function DirectionArrow({ position, rotation, targetPos, isCorrect }: { 
-  position: [number, number, number], 
-  rotation: number,
-  targetPos: [number, number, number],
-  isCorrect: boolean 
+// Individual beam segment with glow effect
+function BeamSegment({ 
+  from, to, isConnected, index 
+}: { 
+  from: [number, number, number], 
+  to: [number, number, number],
+  isConnected: boolean,
+  index: number
 }) {
-  const arrowLength = 0.8;
-  const angleRad = (rotation * Math.PI) / 180;
+  const materialRef = React.useRef<THREE.LineBasicMaterial>(null);
   
-  // Calculate arrow endpoint based on rotation
-  const endX = position[0] + Math.sin(angleRad) * arrowLength;
-  const endZ = position[2] + Math.cos(angleRad) * arrowLength;
+  useFrame(({ clock }) => {
+    if (materialRef.current) {
+      const pulse = 0.7 + Math.sin(clock.elapsedTime * 3 + index * 0.5) * 0.3;
+      materialRef.current.opacity = pulse;
+    }
+  });
+  
+  const points = React.useMemo(() => {
+    return new Float32Array([
+      from[0], from[1], from[2],
+      to[0], to[1], to[2]
+    ]);
+  }, [from, to]);
   
   return (
-    <Line
-      points={[
-        position,
-        [endX, position[1], endZ]
-      ]}
-      color={isCorrect ? '#06ffa5' : '#ffba08'}
-      lineWidth={3}
-      opacity={0.8}
-      transparent
-    />
+    <group>
+      {/* Main beam line */}
+      <line>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={points}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial
+          ref={materialRef}
+          color={isConnected ? '#06ffa5' : '#ffba08'}
+          linewidth={2}
+          transparent
+          opacity={0.8}
+        />
+      </line>
+      
+      {/* Glow effect */}
+      <line>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array(points)}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial
+          color={isConnected ? '#06ffa5' : '#ffba08'}
+          linewidth={6}
+          transparent
+          opacity={0.2}
+        />
+      </line>
+    </group>
   );
 }
 
-// Line component using Three.js Line2
-function Line({ points, color, lineWidth, opacity, transparent, dashed, dashScale }: {
-  points: [number, number, number][];
-  color: string;
-  lineWidth: number;
-  opacity?: number;
-  transparent?: boolean;
-  dashed?: boolean;
-  dashScale?: number;
-}) {
-  const ref = React.useRef<any>();
-  
-  React.useEffect(() => {
-    if (ref.current) {
-      ref.current.computeLineDistances();
-    }
-  }, [points]);
-  
-  return (
-    <line ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={points.length}
-          array={new Float32Array(points.flat())}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <lineBasicMaterial
-        color={color}
-        linewidth={lineWidth}
-        opacity={opacity}
-        transparent={transparent}
-        linecap="round"
-        linejoin="round"
-      />
-    </line>
-  );
+// Legacy compatibility
+export function ConnectionLines() {
+  return null;
+}
+
+export function ObstacleComponent() {
+  return null;
 }
 
 // Crystal Prism - simple rotatable element
@@ -414,306 +372,82 @@ function CrystalPrism({ element }: PuzzleElementProps) {
   const makeMove = useGameStore(state => state.makeMove);
   const levelComplete = useGameStore(state => state.levelComplete);
   const movesRemaining = useGameStore(state => state.movesRemaining);
-  const currentLevel = useGameStore(state => state.currentLevel);
   
   const currentRotation = useGameStore(state => 
     state.elementsState.find(e => e.id === element.id)?.rotation || 0
   );
 
-  // Check if this prism is correctly aligned in the chain
-  const level = LEVELS.find(l => l.id === currentLevel);
-  const elementsState = useGameStore(state => state.elementsState);
-  
-  // Check if this is the first prism (starting point)
-  const isFirstPrism = level?.chain[0] === element.id || 
-                       level?.secondaryChains?.some(chain => chain[0] === element.id);
-  
-  // Helper to check if prism points at target
-  const isPointingAt = (prism: any, targetPos: [number, number, number], angleOffset = 0) => {
-    const angleToTarget = Math.atan2(
-      targetPos[0] - prism.position[0],
-      targetPos[2] - prism.position[2]
-    ) * (180 / Math.PI);
-    
-    const normalizedAngle = ((angleToTarget % 360) + 360) % 360;
-    const prismAngle = (((prism.rotation || 0) + angleOffset) % 360 + 360) % 360;
-    
-    const diff = Math.abs(normalizedAngle - prismAngle);
-    return diff < 22.5 || diff > 337.5;
-  };
-  
-  // Helper: Check if beam path is blocked by obstacles
-  const isPathBlocked = (from: [number, number, number], to: [number, number, number]) => {
-    if (!level?.obstacles) return false;
-    
-    for (const obstacle of level.obstacles) {
-      const obstaclePos = obstacle.position;
-      const obstacleRadius = obstacle.type === 'pillar' ? 0.5 : 
-                           obstacle.type === 'wall' ? 1.0 : 0.6;
-      
-      const dx = to[0] - from[0];
-      const dz = to[2] - from[2];
-      const fx = from[0] - obstaclePos[0];
-      const fz = from[2] - obstaclePos[2];
-      
-      const a = dx * dx + dz * dz;
-      const b = 2 * (fx * dx + fz * dz);
-      const c = (fx * fx + fz * fz) - obstacleRadius * obstacleRadius;
-      
-      const discriminant = b * b - 4 * a * c;
-      
-      if (discriminant >= 0) {
-        const t1 = (-b - Math.sqrt(discriminant)) / (2 * a);
-        const t2 = (-b + Math.sqrt(discriminant)) / (2 * a);
-        
-        if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
-
-  // Check if this prism is receiving power (beam has reached it)
-  const isPowered = React.useMemo(() => {
-    if (!level || !level.chain) return false;
-    if (isFirstPrism) return true; // First prism is always powered
-    
-    // Check primary chain
-    const chainIndex = level.chain.indexOf(element.id);
-    if (chainIndex > 0) {
-      // Check if all previous prisms in chain are correctly aligned
-      for (let i = 0; i < chainIndex; i++) {
-        const prevPrism = elementsState.find(el => el.id === level.chain[i]);
-        if (!prevPrism) return false;
-        
-        const targetId = level.chain[i + 1];
-        const target = elementsState.find(el => el.id === targetId);
-        if (!target) return false;
-        
-        // Check if path is blocked
-        if (isPathBlocked(prevPrism.position, target.position)) return false;
-        
-        const prismType = prevPrism.prismType || 'normal';
-        if (prismType === 'splitter') {
-          const mainHit = isPointingAt(prevPrism, target.position);
-          const leftHit = isPointingAt(prevPrism, target.position, -45);
-          const rightHit = isPointingAt(prevPrism, target.position, 45);
-          if (!mainHit && !leftHit && !rightHit) return false;
-        } else if (prismType === 'mirror') {
-          if (!isPointingAt(prevPrism, target.position, 90)) return false;
-        } else {
-          if (!isPointingAt(prevPrism, target.position)) return false;
-        }
-      }
-      return true;
-    }
-    
-    // Check secondary chains
-    if (level.secondaryChains) {
-      for (const chain of level.secondaryChains) {
-        const secIndex = chain.indexOf(element.id);
-        if (secIndex > 0) {
-          for (let i = 0; i < secIndex; i++) {
-            const prevPrism = elementsState.find(el => el.id === chain[i]);
-            if (!prevPrism) return false;
-            
-            const targetId = chain[i + 1];
-            const target = elementsState.find(el => el.id === targetId);
-            if (!target) return false;
-            
-            // Check if path is blocked
-            if (isPathBlocked(prevPrism.position, target.position)) return false;
-            
-            const prismType = prevPrism.prismType || 'normal';
-            if (prismType === 'splitter') {
-              const mainHit = isPointingAt(prevPrism, target.position);
-              const leftHit = isPointingAt(prevPrism, target.position, -45);
-              const rightHit = isPointingAt(prevPrism, target.position, 45);
-              if (!mainHit && !leftHit && !rightHit) return false;
-            } else if (prismType === 'mirror') {
-              if (!isPointingAt(prevPrism, target.position, 90)) return false;
-            } else {
-              if (!isPointingAt(prevPrism, target.position)) return false;
-            }
-          }
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  }, [level, element.id, elementsState, isFirstPrism]);
-  
-  const isCorrect = React.useMemo(() => {
-    if (!level || !level.chain) return false;
-    
-    const chainIndex = level.chain.indexOf(element.id);
-    if (chainIndex === -1) return false;
-    
-    // Determine target
-    let targetPos: [number, number, number];
-    if (chainIndex < level.chain.length - 1) {
-      const nextPrism = elementsState.find(el => el.id === level.chain[chainIndex + 1]);
-      if (!nextPrism) return false;
-      targetPos = nextPrism.position;
-    } else {
-      targetPos = level.runePosition;
-    }
-    
-    // Check alignment
-    const angleToTarget = Math.atan2(
-      targetPos[0] - element.position[0],
-      targetPos[2] - element.position[2]
-    ) * (180 / Math.PI);
-    
-    const normalizedAngle = ((angleToTarget % 360) + 360) % 360;
-    const prismAngle = ((currentRotation % 360) + 360) % 360;
-    
-    const diff = Math.abs(normalizedAngle - prismAngle);
-    return diff < 22.5 || diff > 337.5;
-  }, [level, element.id, element.position, currentRotation, elementsState]);
-
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    // Don't allow rotation if prism is locked
     if (element.locked) return;
     if (!levelComplete && movesRemaining > 0) {
-      makeMove(element.id, 'rotate', { direction: 1 });
+      const direction = (e.button === 2 || e.nativeEvent.shiftKey) ? -1 : 1;
+      makeMove(element.id, 'rotate', { direction });
     }
   };
+  
+  const handleContextMenu = (e: ThreeEvent<MouseEvent>) => {
+    e.nativeEvent.preventDefault();
+  };
 
-  const prismType = element.prismType || 'normal';
-
-  return (
-    <group 
-      position={element.position}
-      rotation={[0, currentRotation * (Math.PI / 180), 0]}
-    >
-      {/* Main prism body - different shapes for different types */}
-      {prismType === 'splitter' && (
-        <>
-          {/* Y-shaped splitter */}
-          <mesh onClick={handleClick} castShadow>
-            <cylinderGeometry args={[0.15, 0.15, 0.6, 3]} />
-            <meshStandardMaterial
-              color={element.locked ? '#94a3b8' : (isPowered ? (isCorrect ? '#06ffa5' : '#ffba08') : '#4a5568')}
-              emissive={element.locked ? '#64748b' : (isPowered ? (isCorrect ? '#06ffa5' : '#ffba08') : '#2d3748')}
-              emissiveIntensity={element.locked ? 0.3 : (isPowered ? (isCorrect ? 0.8 : 0.4) : 0.1)}
-              transparent
-              opacity={isPowered ? 0.85 : 0.4}
-            />
-          </mesh>
-          {/* Three output markers */}
-          <mesh position={[0, 0, 0.5]} onClick={handleClick}>
-            <boxGeometry args={[0.12, 0.12, 0.15]} />
-            <meshStandardMaterial color="#ffba08" emissive="#ffba08" emissiveIntensity={0.8} />
-          </mesh>
-          <mesh position={[-0.35, 0, 0.35]} rotation={[0, -Math.PI/4, 0]} onClick={handleClick}>
-            <boxGeometry args={[0.12, 0.12, 0.15]} />
-            <meshStandardMaterial color="#ffba08" emissive="#ffba08" emissiveIntensity={0.8} />
-          </mesh>
-          <mesh position={[0.35, 0, 0.35]} rotation={[0, Math.PI/4, 0]} onClick={handleClick}>
-            <boxGeometry args={[0.12, 0.12, 0.15]} />
-            <meshStandardMaterial color="#ffba08" emissive="#ffba08" emissiveIntensity={0.8} />
-          </mesh>
-        </>
-      )}
-
-      {prismType === 'mirror' && (
-        <>
-          {/* L-shaped mirror */}
-          <mesh onClick={handleClick} castShadow>
-            <boxGeometry args={[0.5, 0.5, 0.1]} />
-            <meshStandardMaterial
-              color={isPowered ? (isCorrect ? '#06ffa5' : '#7b2cbf') : '#4a5568'}
-              emissive={isPowered ? (isCorrect ? '#06ffa5' : '#7b2cbf') : '#2d3748'}
-              emissiveIntensity={isPowered ? (isCorrect ? 0.8 : 0.4) : 0.1}
-              transparent
-              opacity={isPowered ? 0.85 : 0.4}
-              metalness={0.8}
-              roughness={0.2}
-            />
-          </mesh>
-          {/* Bent marker showing 90° redirect */}
-          <mesh position={[0, 0, 0.3]} onClick={handleClick}>
-            <torusGeometry args={[0.25, 0.08, 8, 6, Math.PI / 2]} />
-            <meshStandardMaterial color="#7b2cbf" emissive="#7b2cbf" emissiveIntensity={0.8} />
-          </mesh>
-        </>
-      )}
-
-      {prismType === 'amplifier' && (
-        <>
-          {/* Diamond-shaped amplifier */}
-          <mesh onClick={handleClick} castShadow>
-            <octahedronGeometry args={[0.45, 0]} />
-            <meshStandardMaterial
-              color={isPowered ? (isCorrect ? '#06ffa5' : '#ff006e') : '#4a5568'}
-              emissive={isPowered ? (isCorrect ? '#06ffa5' : '#ff006e') : '#2d3748'}
-              emissiveIntensity={isPowered ? (isCorrect ? 0.9 : 0.5) : 0.1}
-              transparent
-              opacity={isPowered ? 0.85 : 0.4}
-            />
-          </mesh>
-          {/* Pulsing ring */}
-          <mesh position={[0, 0, 0]} onClick={handleClick}>
-            <torusGeometry args={[0.5, 0.08, 8, 16]} />
-            <meshStandardMaterial color="#ff006e" emissive="#ff006e" emissiveIntensity={0.8} />
-          </mesh>
-        </>
-      )}
-
-      {prismType === 'normal' && (
-        <>
-          <mesh onClick={handleClick} castShadow>
-            <octahedronGeometry args={[0.4, 0]} />
-            <meshStandardMaterial
-              color={element.locked ? '#94a3b8' : (isPowered ? (isCorrect ? '#06ffa5' : '#4dd8e8') : '#4a5568')}
-              emissive={element.locked ? '#64748b' : (isPowered ? (isCorrect ? '#06ffa5' : '#4dd8e8') : '#2d3748')}
-              emissiveIntensity={element.locked ? 0.3 : (isPowered ? (isCorrect ? 0.6 : 0.2) : 0.1)}
-              transparent
-              opacity={isPowered ? 0.8 : 0.4}
-            />
-          </mesh>
-          
-          {/* Direction marker - shows which way the prism is "facing" */}
-          <mesh position={[0, 0, 0.5]} onClick={handleClick}>
-            <boxGeometry args={[0.15, 0.15, 0.2]} />
-            <meshStandardMaterial
-              color={element.locked ? '#cbd5e1' : (isPowered ? (isCorrect ? '#06ffa5' : '#ffba08') : '#4a5568')}
-              emissive={element.locked ? '#94a3b8' : (isPowered ? (isCorrect ? '#06ffa5' : '#ffba08') : '#2d3748')}
-              emissiveIntensity={element.locked ? 0.3 : (isPowered ? 0.8 : 0.1)}
-            />
-          </mesh>
-        </>
-      )}
-    </group>
-  );
-}
-
-// Central Rune - goal (visual indicator)
-function CentralRune({ element }: PuzzleElementProps) {
-  const levelComplete = useGameStore(state => state.levelComplete);
+  // Smooth rotation animation
+  const groupRef = React.useRef<THREE.Group>(null);
+  const targetRotation = React.useRef(currentRotation);
+  const animatedRotation = React.useRef(currentRotation);
+  
+  React.useEffect(() => {
+    targetRotation.current = currentRotation;
+  }, [currentRotation]);
+  
+  useFrame(() => {
+    if (groupRef.current && Math.abs(targetRotation.current - animatedRotation.current) > 0.1) {
+      animatedRotation.current += (targetRotation.current - animatedRotation.current) * 0.25;
+      groupRef.current.rotation.y = animatedRotation.current * (Math.PI / 180);
+    } else if (groupRef.current) {
+      animatedRotation.current = targetRotation.current;
+      groupRef.current.rotation.y = targetRotation.current * (Math.PI / 180);
+    }
+  });
 
   return (
     <group position={element.position}>
-      {/* Base platform */}
-      <mesh position={[0, -0.3, 0]} receiveShadow>
-        <cylinderGeometry args={[0.8, 0.9, 0.2, 8]} />
-        <meshStandardMaterial color="#2a3a5c" />
-      </mesh>
-      
-      {/* Rune symbol */}
-      <mesh>
-        <torusGeometry args={[0.5, 0.15, 8, 6]} />
-        <meshStandardMaterial
-          color={levelComplete ? '#06ffa5' : '#7b2cbf'}
-          emissive={levelComplete ? '#06ffa5' : '#7b2cbf'}
-          emissiveIntensity={levelComplete ? 1 : 0.5}
-        />
-      </mesh>
+      <group ref={groupRef}>
+        {/* Locked indicator */}
+        {element.locked && (
+          <group position={[0, 0.8, 0]}>
+            <mesh>
+              <boxGeometry args={[0.2, 0.25, 0.15]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.2} />
+            </mesh>
+            <mesh position={[0, 0.2, 0]}>
+              <torusGeometry args={[0.12, 0.04, 8, 16, Math.PI]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.2} />
+            </mesh>
+          </group>
+        )}
+        
+        {/* Main prism body */}
+        <mesh onPointerDown={handlePointerDown} onContextMenu={handleContextMenu} castShadow>
+          <octahedronGeometry args={[0.4, 0]} />
+          <meshStandardMaterial
+            color={element.locked ? '#94a3b8' : '#4a5568'}
+            emissive={element.locked ? '#64748b' : '#2d3748'}
+            emissiveIntensity={element.locked ? 0.3 : 0.1}
+            transparent
+            opacity={0.6}
+          />
+        </mesh>
+        
+        {/* Direction marker - shows which way beam will exit */}
+        <mesh position={[0, 0, 0.5]} onPointerDown={handlePointerDown}>
+          <boxGeometry args={[0.15, 0.15, 0.2]} />
+          <meshStandardMaterial
+            color={element.locked ? '#cbd5e1' : '#ffba08'}
+            emissive={element.locked ? '#94a3b8' : '#ffba08'}
+            emissiveIntensity={element.locked ? 0.3 : 0.5}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }

@@ -1,48 +1,41 @@
 import { Level } from '../../types/game';
 
-/**
- * LEVEL 1: TUTORIAL - "First Light"
- * 
- * Teaching: Basic beam redirection mechanics
- * - Click prism to rotate 45°
- * - Green beam shows correct connections
- * - Connect start → rune
- * 
- * Design: Simple 2-prism chain
- * Solution: Both prisms point right (90°)
- */
+// Level 1: First Light
+// Tutorial: Two prisms that ripple together
+// Easy start - both need the same rotation
 export const level1: Level = {
   id: 1,
   name: 'First Light',
-  maxMoves: 10,
-  runePosition: [4, 0, 0],
-  chain: ['prism1', 'prism2'],
-  solution: {
-    prism1: 90,  // Point right
-    prism2: 90   // Point right
+  maxMoves: 4,
+  lightSource: {
+    position: [-3, 0, 0],
+    direction: 90  // Beam travels east
   },
-  starThresholds: {
-    gold: 2,    // Perfect: 2 clicks (each prism rotated twice)
-    silver: 4,  // Good: some exploration
-    bronze: 6   // Complete: lots of clicking
+  target: {
+    position: [3, 0, 0]
   },
   elements: [
     {
-      id: 'prism1',
+      id: 'left',
       type: 'prism',
-      position: [-2, 0, 0],
-      rotation: 0  // Start facing north
+      position: [-0.6, 0, 0],
+      rotation: 0,   // Needs 90° = +2 CW
+      prismType: 'normal'
     },
     {
-      id: 'prism2',
+      id: 'right',
       type: 'prism',
-      position: [0, 0, 0],
-      rotation: 0  // Start facing north
-    },
-    {
-      id: 'rune1',
-      type: 'rune',
-      position: [4, 0, 0]
+      position: [0.6, 0, 0],  // Adjacent to left!
+      rotation: 0,   // Needs 90° = +2 CW (same!)
+      prismType: 'normal'
     }
-  ]
+  ],
+  // Both start at 0°, both need 90°
+  // Click either, both rotate! 2 CW clicks.
+  // Teaches: adjacent prisms move together
+  starThresholds: {
+    gold: 2,
+    silver: 3,
+    bronze: 4
+  }
 };

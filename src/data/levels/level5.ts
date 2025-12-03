@@ -1,69 +1,85 @@
 import { Level } from '../../types/game';
 
-/**
- * LEVEL 5: CHAIN THINKING - "Sequence"
- * 
- * Teaching: Must solve in order - chain validation
- * - Can't skip ahead
- * - Must connect A→B→C→D in sequence
- * - Beam only propagates through correct connections
- * 
- * Design: 5-prism mandatory sequence with no shortcuts
- * Challenge: Plan the full path before starting
- */
+// Level 5: Hub Chaos
+// Cross pattern - center connects to ALL 4
+// But each arm needs a DIFFERENT rotation!
 export const level5: Level = {
   id: 5,
-  name: 'Sequence',
-  maxMoves: 25,
-  runePosition: [8, 0, 0],
-  chain: ['prism1', 'prism2', 'prism3', 'prism4', 'prism5'],
-  solution: {
-    prism1: 45,   // Diagonal up-right
-    prism2: 90,   // Right
-    prism3: 315,  // Diagonal down-right
-    prism4: 90,   // Right
-    prism5: 90    // Right to rune
+  name: 'Hub Chaos',
+  maxMoves: 12,
+  lightSource: {
+    position: [-4, 0, 0],
+    direction: 90  // Beam travels east
   },
-  starThresholds: {
-    gold: 10,   // Perfect: planned whole path
-    silver: 16, // Good: some backtracking
-    bronze: 22  // Complete: trial and error
+  target: {
+    position: [4, 0, 0]
   },
   elements: [
+    // West - beam entry
     {
-      id: 'prism1',
+      id: 'west',
       type: 'prism',
-      position: [-2, 0, 0],
-      rotation: 0
+      position: [-1.2, 0, 0],
+      rotation: 45,  // Needs 90° = +1 CW
+      prismType: 'normal'
     },
+    // Center - THE HUB (adjacent to all 4!)
     {
-      id: 'prism2',
+      id: 'center',
       type: 'prism',
-      position: [0, 0, 2],
-      rotation: 0
+      position: [0, 0, 0],
+      rotation: 0,   // Needs 90° = +2 CW
+      prismType: 'normal'
     },
+    // East - beam exit
     {
-      id: 'prism3',
+      id: 'east',
       type: 'prism',
-      position: [2, 0, 2],
-      rotation: 0
+      position: [1.2, 0, 0],
+      rotation: 45,  // Needs 90° = +1 CW
+      prismType: 'normal'
     },
+    // North - NOT on beam path but affects center!
     {
-      id: 'prism4',
+      id: 'north',
       type: 'prism',
-      position: [4, 0, 0],
-      rotation: 0
+      position: [0, 0, -1.2],
+      rotation: 270, // Needs... anything? Or does it?
+      prismType: 'normal'
     },
+    // South - NOT on beam path but affects center!
     {
-      id: 'prism5',
+      id: 'south',
       type: 'prism',
-      position: [6, 0, 0],
-      rotation: 0
-    },
-    {
-      id: 'rune1',
-      type: 'rune',
-      position: [8, 0, 0]
+      position: [0, 0, 1.2],
+      rotation: 270, // Same as north
+      prismType: 'normal'
     }
-  ]
+  ],
+  // Beam path: west → center → east
+  // west: 45°→90° = +1 CW
+  // center: 0°→90° = +2 CW  
+  // east: 45°→90° = +1 CW
+  //
+  // Center needs +2, but west/east only need +1!
+  // Clicking center affects ALL 5.
+  // Clicking west affects west+center.
+  // Clicking east affects center+east.
+  //
+  // Strategy:
+  //   Click center 1x: all +1 → west=90✓, center=45, east=90✓, n=315, s=315
+  //   Now just need center +1 more without touching west/east
+  //   But west/east are adjacent to center! Can't click center alone.
+  //
+  // Better strategy:
+  //   Click west 1x: west=90✓, center=45
+  //   Click east 1x: center=90✓, east=90✓
+  //   Done in 2 moves!
+  //
+  // Gold: 2 (requires insight that edges fix center)
+  starThresholds: {
+    gold: 2,
+    silver: 6,
+    bronze: 12
+  }
 };

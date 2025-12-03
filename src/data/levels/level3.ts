@@ -1,65 +1,66 @@
 import { Level } from '../../types/game';
 
-/**
- * LEVEL 3: LOCKED INFRASTRUCTURE - "Guided Path"
- * 
- * Teaching: Some prisms are pre-placed (locked) infrastructure
- * - Gray prisms = locked (can't rotate)
- * - Cyan prisms = controllable
- * - Locked prisms automatically form correct connections
- * 
- * Design: Only player-controllable prisms in chain
- * Challenge: Identify which prisms you control (only those in chain)
- * 
- * Path: prism1(player) → prism2(locked) → prism3(player) → prism4(locked) → rune
- * Chain: Only includes player-controlled prisms [prism1, prism3]
- */
+// Level 3: Chain Reaction
+// 4 prisms in a line - all adjacent!
+// The MIDDLES need more rotation than the ENDS.
+// Requires insight: click the middles to give them extra rotation!
 export const level3: Level = {
   id: 3,
-  name: 'Guided Path',
-  maxMoves: 15,
-  runePosition: [6, 0, 0],
-  chain: ['prism1', 'prism3'],  // Only player-controlled prisms
-  solution: {
-    prism1: 45,   // Point to locked prism2
-    prism3: 315   // Point to locked prism4
+  name: 'Chain Reaction',
+  maxMoves: 8,
+  lightSource: {
+    position: [-4, 0, 0],
+    direction: 90  // Beam travels east
   },
-  starThresholds: {
-    gold: 2,    // Optimal: 2 prisms × 1 click each = 2 moves
-    silver: 5,  // Good: some exploration
-    bronze: 10  // Complete: figured it out
+  target: {
+    position: [4, 0, 0]
   },
   elements: [
     {
-      id: 'prism1',
+      id: 'p1',
       type: 'prism',
-      position: [-2, 0, 0],
-      rotation: 0  // Player controls this
+      position: [-1.8, 0, 0],
+      rotation: 45,  // Needs 90° = +1 CW
+      prismType: 'normal'
     },
     {
-      id: 'prism2',
+      id: 'p2', 
       type: 'prism',
-      position: [0, 0, 2],
-      rotation: 90,
-      locked: true  // Pre-aimed connector (automatically correct)
+      position: [-0.6, 0, 0],  // Adjacent to p1 AND p3
+      rotation: 0,   // Needs 90° = +2 CW
+      prismType: 'normal'
     },
     {
-      id: 'prism3',
-      type: 'prism',
-      position: [2, 0, 2],
-      rotation: 0  // Player controls this
+      id: 'p3',
+      type: 'prism', 
+      position: [0.6, 0, 0],   // Adjacent to p2 AND p4
+      rotation: 0,   // Needs 90° = +2 CW
+      prismType: 'normal'
     },
     {
-      id: 'prism4',
+      id: 'p4',
       type: 'prism',
-      position: [4, 0, 0],
-      rotation: 270,
-      locked: true  // Final redirect to rune (automatically correct)
-    },
-    {
-      id: 'rune1',
-      type: 'rune',
-      position: [6, 0, 0]
+      position: [1.8, 0, 0],   // Adjacent to p3
+      rotation: 45,  // Needs 90° = +1 CW
+      prismType: 'normal'
     }
-  ]
+  ],
+  // Ends need +1, Middles need +2
+  // 
+  // Clicking p1: rotates p1, p2
+  // Clicking p2: rotates p1, p2, p3
+  // Clicking p3: rotates p2, p3, p4
+  // Clicking p4: rotates p3, p4
+  //
+  // SOLUTION: Click p2 once, then click p3 once!
+  //   Start:  p1=45, p2=0,  p3=0,  p4=45
+  //   +p2 CW: p1=90✓ p2=45, p3=45, p4=45
+  //   +p3 CW: p1=90✓ p2=90✓ p3=90✓ p4=90✓
+  //
+  // Gold: 2 moves! The "aha!" is realizing middles get hit twice.
+  starThresholds: {
+    gold: 2,
+    silver: 4,
+    bronze: 8
+  }
 };
